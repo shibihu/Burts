@@ -13,13 +13,13 @@ class MacroApp(ctk.CTk):
   def __init__(self):
     super().__init__()
 
-    self.title("Anime Macro Pro")
-    self.geometry("320x420+50+50")
+    self.title("Sigma Macro Pro")
+    self.geometry("320x520+50+50")  # ขยายความสูงเพื่อใส่ช่องตั้งค่า Delay
     self.attributes("-topmost", True)
     self.attributes("-alpha", 0.9)
 
     # Variables
-    self.record_state = 0  # 0: Ready, 1: Select Unit Recorded, 2: Place Unit Recorded
+    self.record_state = 0
     self.select_pos = None
     self.place_pos = None
 
@@ -34,7 +34,7 @@ class MacroApp(ctk.CTk):
 
     # Recording Status Cards
     self.card_select = ctk.CTkFrame(self, fg_color="#1E293B")
-    self.card_select.pack(pady=5, fill="x", padx=20)
+    self.card_select.pack(pady=4, fill="x", padx=20)
 
     self.lbl_select_title = ctk.CTkLabel(
         self.card_select,
@@ -52,7 +52,7 @@ class MacroApp(ctk.CTk):
     self.lbl_select_pos.pack(anchor="w", padx=10, pady=(0, 5))
 
     self.card_place = ctk.CTkFrame(self, fg_color="#1E293B")
-    self.card_place.pack(pady=5, fill="x", padx=20)
+    self.card_place.pack(pady=4, fill="x", padx=20)
 
     self.lbl_place_title = ctk.CTkLabel(
         self.card_place,
@@ -69,10 +69,11 @@ class MacroApp(ctk.CTk):
     )
     self.lbl_place_pos.pack(anchor="w", padx=10, pady=(0, 5))
 
-    # Loop Settings Panel
+    # Loop & Delay Settings Panel
     self.frame_settings = ctk.CTkFrame(self, fg_color="transparent")
-    self.frame_settings.pack(pady=10, fill="x", padx=20)
+    self.frame_settings.pack(pady=8, fill="x", padx=20)
 
+    # Loop Count Setting
     self.lbl_loop = ctk.CTkLabel(
         self.frame_settings,
         text="Loop Count ('inf' = Unlimited):",
@@ -84,7 +85,39 @@ class MacroApp(ctk.CTk):
         self.frame_settings, placeholder_text="100", width=280
     )
     self.entry_loop.insert(0, "100")
-    self.entry_loop.pack(pady=5)
+    self.entry_loop.pack(pady=(2, 6))
+
+    # Delay Settings Frame (เรียงเป็น 2 คอลัมน์)
+    self.frame_delays = ctk.CTkFrame(self.frame_settings, fg_color="transparent")
+    self.frame_delays.pack(fill="x")
+
+    # Start Delay
+    self.frame_start_delay = ctk.CTkFrame(
+        self.frame_delays, fg_color="transparent"
+    )
+    self.frame_start_delay.pack(side="left", expand=True, fill="x", padx=(0, 5))
+    ctk.CTkLabel(
+        self.frame_start_delay,
+        text="Start Delay (sec):",
+        font=("Segoe UI", 10),
+    ).pack(anchor="w")
+    self.entry_start_delay = ctk.CTkEntry(self.frame_start_delay, width=130)
+    self.entry_start_delay.insert(0, "0.5")
+    self.entry_start_delay.pack(pady=2)
+
+    # Click Delay
+    self.frame_click_delay = ctk.CTkFrame(
+        self.frame_delays, fg_color="transparent"
+    )
+    self.frame_click_delay.pack(side="right", expand=True, fill="x", padx=(5, 0))
+    ctk.CTkLabel(
+        self.frame_click_delay,
+        text="Action Delay (sec):",
+        font=("Segoe UI", 10),
+    ).pack(anchor="w")
+    self.entry_click_delay = ctk.CTkEntry(self.frame_click_delay, width=130)
+    self.entry_click_delay.insert(0, "0.5")
+    self.entry_click_delay.pack(pady=2)
 
     # Status & Controls
     self.lbl_status = ctk.CTkLabel(
@@ -108,15 +141,12 @@ class MacroApp(ctk.CTk):
     self.start_hotkey_listener()
 
   def handle_f8_press(self):
-    """จัดการการกด F8 เพื่อสลับสเตทและไฮไลต์ GUI"""
     cur_x, cur_y = pyautogui.position()
 
     if self.record_state == 0 or self.record_state == 2:
-      # บันทึก Select Unit
       self.select_pos = (cur_x, cur_y)
       self.record_state = 1
 
-      # ไฮไลต์การเลือกที่ Card 1
       self.card_select.configure(
           fg_color="#1E3A8A", border_width=2, border_color="#3B82F6"
       )
@@ -130,11 +160,9 @@ class MacroApp(ctk.CTk):
       )
 
     elif self.record_state == 1:
-      # บันทึก Place Unit
       self.place_pos = (cur_x, cur_y)
       self.record_state = 2
 
-      # ไฮไลต์การเลือกที่ Card 2
       self.card_select.configure(
           fg_color="#1E293B", border_width=1, border_color="#10B981"
       )
@@ -150,7 +178,6 @@ class MacroApp(ctk.CTk):
       )
 
   def toggle_macro_loop(self):
-    """สั่งเปิด/ปิด การทำงานของลูป (F12)"""
     if self.is_running:
       self.stop_macro()
     else:
@@ -167,9 +194,7 @@ class MacroApp(ctk.CTk):
     self.btn_toggle.configure(
         text="Stop Loop (F12)", fg_color="#DC2626", hover_color="#B91C1C"
     )
-    self.lbl_status.configure(text="Macro Running...", text_color="#10B981")
 
-    # รันการทำงานแบบแยก Thread
     self.macro_thread = threading.Thread(
         target=self._run_macro_loop, daemon=True
     )
@@ -183,23 +208,54 @@ class MacroApp(ctk.CTk):
     self.lbl_status.configure(text="Macro Stopped", text_color="#F59E0B")
 
   def _run_macro_loop(self):
-    raw_val = self.entry_loop.get().strip().lower()
-    is_inf = raw_val == "inf"
-    max_loops = float("inf") if is_inf else int(raw_val if raw_val.isdigit() else 100)
+    # ดึงค่าตั้งค่า
+    raw_loop = self.entry_loop.get().strip().lower()
+    is_inf = raw_loop == "inf"
+    max_loops = (
+        float("inf") if is_inf else int(raw_loop if raw_loop.isdigit() else 100)
+    )
+
+    try:
+      start_delay = float(self.entry_start_delay.get().strip())
+    except ValueError:
+      start_delay = 0.5
+
+    try:
+      action_delay = float(self.entry_click_delay.get().strip())
+    except ValueError:
+      action_delay = 0.5
+
+    # 1. หน่วงเวลาก่อนเริ่มงานรอบแรก (Start Delay)
+    self.lbl_status.configure(
+        text=f"Starting in {start_delay}s...", text_color="#F59E0B"
+    )
+    time.sleep(start_delay)
+
+    if not self.is_running:
+      return
+
+    self.lbl_status.configure(text="Macro Running...", text_color="#10B981")
 
     count = 0
     while self.is_running and count < max_loops:
-      # 1. กดเลือกยูนิต
+      # 2. คลิกเลือกยูนิต
       pyautogui.click(self.select_pos[0], self.select_pos[1])
-      time.sleep(0.15)
 
-      # 2. กดวางยูนิต
+      # หน่วงเวลาก่อนคลิกจุดถัดไป (Action Delay)
+      time.sleep(action_delay)
+
+      if not self.is_running:
+        break
+
+      # 3. คลิกวางยูนิต
       pyautogui.click(self.place_pos[0], self.place_pos[1])
-      time.sleep(0.5)  # ดีเลย์ระหว่างรอบ
+
+      # หน่วงเวลาก่อนเริ่มรอบถัดไป
+      time.sleep(action_delay)
 
       count += 1
 
-    if self.is_running:  # ทำงานครบจำนวนรอบแล้ว
+    if self.is_running:
       self.after(0, self.stop_macro)
 
   def start_hotkey_listener(self):
