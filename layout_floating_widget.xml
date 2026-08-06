@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root_container"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="#222222"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <!-- ปุ่ม Drag / Header -->
+    <TextView
+        android:id="@+id/drag_handle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=" ⠿ "
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <!-- ปุ่ม Play -->
+    <Button
+        android:id="@+id/btn_play"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:backgroundTint="#4CAF50"
+        android:text="▶ PLAY"
+        android:textColor="#FFFFFF" />
+
+    <!-- ปุ่ม ปิด Widget -->
+    <Button
+        android:id="@+id/btn_close_widget"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="6dp"
+        android:backgroundTint="#FF4444"
+        android:text="✕"
+        android:textColor="#FFFFFF" />
+</LinearLayout>
